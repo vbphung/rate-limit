@@ -20,7 +20,7 @@ type RateLimiter interface {
 
 type rateLimiter struct {
 	store Store
-	mx    sync.Mutex
+	mu    sync.Mutex
 }
 
 func New(store Store) RateLimiter {
@@ -37,8 +37,8 @@ func (r *rateLimiter) Allow(ctx context.Context, opts *Options, key string) (int
 		curKey    = r.rateKey(key, curWindow)
 	)
 
-	r.mx.Lock()
-	defer r.mx.Unlock()
+	r.mu.Lock()
+	defer r.mu.Unlock()
 
 	prev, cur, err := r.store.Get(ctx, prevKey, curKey)
 	if err != nil {
