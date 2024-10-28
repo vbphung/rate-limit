@@ -47,7 +47,7 @@ func TestRate(t *testing.T) {
 	sendReq := func(ctx context.Context, c int) {
 		go func() {
 			t := time.Now()
-			statusCode, err := r.Allow(ctx, opts, key)
+			_, statusCode, err := r.Allow(ctx, opts, key)
 			reqs[c] = append(reqs[c], req{t, err == nil && statusCode == http.StatusOK})
 		}()
 

@@ -15,7 +15,7 @@ type Options struct {
 }
 
 type RateLimiter interface {
-	Allow(ctx context.Context, opts *Options, key string) (int, error)
+	Allow(ctx context.Context, opts *Options, key string) (Headers, int, error)
 }
 
 type rateLimiter struct {
@@ -29,12 +29,21 @@ func New(store Store) RateLimiter {
 	}
 }
 
-func (r *rateLimiter) Allow(ctx context.Context, opts *Options, key string) (int, error) {
+func (r *rateLimiter) Allow(ctx context.Context, opts *Options, key string) (Headers, int, error) {
 	var (
 		timestamp = time.Now()
 		curWindow = r.curWindow(opts, timestamp)
-		prevKey   = r.rateKey(key, curWindow-1)
-		curKey    = r.rateKey(key, curWindow)
+	)
+	rate, statusCode, err := r.calculate(ctx, opts, key, timestamp, curWindow)
+	return newHeaders(opts, timestamp, curWindow, rate), statusCode, err
+}
+
+func (r *rateLimiter) calculate(ctx context.Context, opts *Options, key string,
+	timestamp time.Time, curWindow int64,
+) (float64, int, error) {
+	var (
+		prevKey = r.rateKey(key, curWindow-1)
+		curKey  = r.rateKey(key, curWindow)
 	)
 
 	r.mu.Lock()
@@ -42,20 +51,20 @@ func (r *rateLimiter) Allow(ctx context.Context, opts *Options, key string) (int
 
 	prev, cur, err := r.store.Get(ctx, prevKey, curKey)
 	if err != nil {
-		return http.StatusInternalServerError, err
+		return 0, http.StatusInternalServerError, err
 	}
 
 	rate := r.prevWindowPercent(opts, timestamp)*float64(prev) + float64(cur)
 	if int(rate) >= opts.Rate {
-		return http.StatusTooManyRequests, nil
+		return rate, http.StatusTooManyRequests, nil
 	}
 
 	err = r.store.Inc(ctx, curKey)
 	if err != nil {
-		return http.StatusInternalServerError, err
+		return rate, http.StatusInternalServerError, err
 	}
 
-	return http.StatusOK, nil
+	return rate, http.StatusOK, nil
 }
 
 func (r *rateLimiter) curWindow(opts *Options, t time.Time) int64 {

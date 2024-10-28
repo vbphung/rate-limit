@@ -24,7 +24,13 @@ func GinAllow(ginOpts *GinOptions, r RateLimiter) gin.HandlerFunc {
 			return
 		}
 
-		statusCode, err := r.Allow(ctx.Request.Context(), ginOpts.Options, key)
+		headers, statusCode, err := r.Allow(ctx.Request.Context(), ginOpts.Options, key)
+		if len(headers) > 0 {
+			for k, v := range headers {
+				ctx.Writer.Header().Set(string(k), v)
+			}
+		}
+
 		if err != nil || statusCode != http.StatusOK {
 			ctx.AbortWithError(statusCode, err)
 			return
