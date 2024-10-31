@@ -27,7 +27,7 @@ func GinAllow(ginOpts *GinOptions, r RateLimiter) gin.HandlerFunc {
 		headers, statusCode, err := r.Allow(ctx.Request.Context(), ginOpts.Options, key)
 		if len(headers) > 0 {
 			for k, v := range headers {
-				ctx.Writer.Header().Set(string(k), v)
+				ctx.Writer.Header().Set(k, v)
 			}
 		}
 

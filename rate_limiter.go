@@ -9,9 +9,10 @@ import (
 )
 
 type Options struct {
-	Rate   int
-	Window time.Duration
-	Epoch  time.Time
+	Rate    int
+	Window  time.Duration
+	Epoch   time.Time
+	Headers HeaderKeys
 }
 
 type RateLimiter interface {
